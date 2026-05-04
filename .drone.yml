@@ -8,42 +8,27 @@ trigger:
     - custom
 
 steps:
-  - name: copy-files
-    image: appleboy/drone-scp
-    settings:
-      host: 172.17.1.25
-      username:
-        from_secret: ssh_user
-      password:
-        from_secret: ssh_password
-      port: 22
-      target: /app/promptfill
-      source:
-        - infra/docker-compose.prod.yml
-        - infra/nginx.conf
-
   - name: deploy
-    image: appleboy/drone-ssh
+    image: alpine:3.19
     environment:
+      SSHPASS:
+        from_secret: ssh_password
       GH_PAT:
         from_secret: gh_pat
       GH_OWNER:
         from_secret: gh_owner
-    settings:
-      host: 172.17.1.25
-      username:
-        from_secret: ssh_user
-      password:
-        from_secret: ssh_password
-      port: 22
-      envs: [GH_PAT, GH_OWNER]
-      script:
-        - set -e
-        - mkdir -p /app/promptfill
-        - cd /app/promptfill
-        - mv infra/docker-compose.prod.yml docker-compose.yml || true
-        - echo "$GH_PAT" | docker login ghcr.io -u "$GH_OWNER" --password-stdin
-        - docker compose pull
-        - docker compose up -d --force-recreate
-        - docker image prune -f
-        - echo "Deployment complete!"
+    commands:
+      - apk add --no-cache openssh-client sshpass
+      - mkdir -p /root/.ssh && ssh-keyscan -H 172.17.1.25 >> /root/.ssh/known_hosts
+      - sshpass -e scp -r infra/ root@172.17.1.25:/app/promptfill/
+      - |
+        sshpass -e ssh root@172.17.1.25 /bin/bash << ENDSSH
+          set -e
+          cd /app/promptfill
+          mv infra/docker-compose.prod.yml docker-compose.yml 2>/dev/null || true
+          echo "${GH_PAT}" | docker login ghcr.io -u "${GH_OWNER}" --password-stdin
+          docker compose pull
+          docker compose up -d --force-recreate
+          docker image prune -f
+          echo "Deployment complete!"
+        ENDSSH
