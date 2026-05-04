@@ -24,13 +24,13 @@ steps:
   - name: deploy
     image: appleboy/drone-ssh
     environment:
+      PLUGIN_USERNAME: root
       GH_PAT:
         from_secret: gh_pat
       GH_OWNER:
         from_secret: gh_owner
     settings:
       host: 172.17.1.25
-      username: root
       password:
         from_secret: ssh_password
       port: 22
