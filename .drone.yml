@@ -12,7 +12,8 @@ steps:
     image: appleboy/drone-scp
     settings:
       host: 172.17.1.25
-      username: root
+      username:
+        from_secret: ssh_user
       password:
         from_secret: ssh_password
       port: 22
@@ -24,13 +25,14 @@ steps:
   - name: deploy
     image: appleboy/drone-ssh
     environment:
-      PLUGIN_USERNAME: root
       GH_PAT:
         from_secret: gh_pat
       GH_OWNER:
         from_secret: gh_owner
     settings:
       host: 172.17.1.25
+      username:
+        from_secret: ssh_user
       password:
         from_secret: ssh_password
       port: 22
