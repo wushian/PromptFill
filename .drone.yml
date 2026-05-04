@@ -19,12 +19,11 @@ steps:
         from_secret: gh_owner
     commands:
       - apk add --no-cache openssh-client sshpass
-      - '[ -n "$SSHPASS" ]  || { echo "ERROR: Drone secret ssh_password not set"; exit 1; }'
-      - '[ -n "$GH_PAT" ]   || { echo "ERROR: Drone secret gh_pat not set";       exit 1; }'
-      - '[ -n "$GH_OWNER" ] || { echo "ERROR: Drone secret gh_owner not set";     exit 1; }'
-      - mkdir -p /root/.ssh && ssh-keyscan -H 172.17.1.25 >> /root/.ssh/known_hosts
+      - mkdir -p /root/.ssh
+      - ssh-keyscan -H 172.17.1.25 >> /root/.ssh/known_hosts
       - sshpass -e ssh root@172.17.1.25 mkdir -p /app/promptfill
-      - printf 'GH_PAT=%s\nGH_OWNER=%s\n' "$GH_PAT" "$GH_OWNER" > /tmp/.env
+      - echo "GH_PAT=$GH_PAT" > /tmp/.env
+      - echo "GH_OWNER=$GH_OWNER" >> /tmp/.env
       - sshpass -e scp /tmp/.env root@172.17.1.25:/app/promptfill/.env
       - sshpass -e scp -r infra/ root@172.17.1.25:/app/promptfill/
       - sshpass -e ssh root@172.17.1.25 bash /app/promptfill/infra/deploy.sh
