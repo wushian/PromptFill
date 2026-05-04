@@ -1,0 +1,47 @@
+kind: pipeline
+type: docker
+name: deploy
+
+# 只回應 GitHub Actions 透過 API 觸發，不回應 git push
+trigger:
+  event:
+    - custom
+
+steps:
+  - name: copy-files
+    image: appleboy/drone-scp
+    settings:
+      host: <DEPLOY_HOST>
+      username: root
+      password:
+        from_secret: ssh_password
+      port: 22
+      target: /app/promptfill
+      source:
+        - infra/docker-compose.prod.yml
+        - infra/nginx.conf
+
+  - name: deploy
+    image: appleboy/drone-ssh
+    environment:
+      GH_PAT:
+        from_secret: gh_pat
+      GH_OWNER:
+        from_secret: gh_owner
+    settings:
+      host: <DEPLOY_HOST>
+      username: root
+      password:
+        from_secret: ssh_password
+      port: 22
+      envs: [GH_PAT, GH_OWNER]
+      script:
+        - set -e
+        - mkdir -p /app/promptfill
+        - cd /app/promptfill
+        - mv infra/docker-compose.prod.yml docker-compose.yml || true
+        - echo "$GH_PAT" | docker login ghcr.io -u "$GH_OWNER" --password-stdin
+        - docker compose pull
+        - docker compose up -d --force-recreate
+        - docker image prune -f
+        - echo "Deployment complete!"

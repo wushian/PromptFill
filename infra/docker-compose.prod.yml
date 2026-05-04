@@ -1,0 +1,6 @@
+services:
+  web:
+    image: ghcr.io/wushian/promptfill:main
+    restart: unless-stopped
+    ports:
+      - "80:80"
