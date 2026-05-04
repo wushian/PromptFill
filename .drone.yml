@@ -11,7 +11,7 @@ steps:
   - name: copy-files
     image: appleboy/drone-scp
     settings:
-      host: <DEPLOY_HOST>
+      host: 172.17.1.25
       username: root
       password:
         from_secret: ssh_password
@@ -29,7 +29,7 @@ steps:
       GH_OWNER:
         from_secret: gh_owner
     settings:
-      host: <DEPLOY_HOST>
+      host: 172.17.1.25
       username: root
       password:
         from_secret: ssh_password
