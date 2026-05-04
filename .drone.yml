@@ -24,11 +24,12 @@ steps:
       - '[ -n "$GH_OWNER" ] || { echo "ERROR: Drone secret gh_owner not set";     exit 1; }'
       - mkdir -p /root/.ssh && ssh-keyscan -H 172.17.1.25 >> /root/.ssh/known_hosts
       - sshpass -e ssh root@172.17.1.25 mkdir -p /app/promptfill
-      - sshpass -e scp -r infra/ root@172.17.1.25:/app/promptfill/
       - printf 'GH_PAT=%s\nGH_OWNER=%s\n' "$GH_PAT" "$GH_OWNER" > /tmp/.env
       - sshpass -e scp /tmp/.env root@172.17.1.25:/app/promptfill/.env
-      - |-
-        sshpass -e ssh root@172.17.1.25 bash << 'ENDSSH'
+      - sshpass -e scp -r infra/ root@172.17.1.25:/app/promptfill/
+      - |
+        cat > /tmp/deploy.sh << 'SCRIPT'
+        #!/bin/bash
         set -e
         cd /app/promptfill
         . ./.env
@@ -39,4 +40,6 @@ steps:
         docker image prune -f
         rm -f .env
         echo "Deployment complete!"
-        ENDSSH
+        SCRIPT
+      - sshpass -e scp /tmp/deploy.sh root@172.17.1.25:/tmp/deploy.sh
+      - sshpass -e ssh root@172.17.1.25 bash /tmp/deploy.sh
