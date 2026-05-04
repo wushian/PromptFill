@@ -23,14 +23,20 @@ steps:
       - '[ -n "$GH_PAT" ]   || { echo "ERROR: Drone secret gh_pat not set";       exit 1; }'
       - '[ -n "$GH_OWNER" ] || { echo "ERROR: Drone secret gh_owner not set";     exit 1; }'
       - mkdir -p /root/.ssh && ssh-keyscan -H 172.17.1.25 >> /root/.ssh/known_hosts
+      - sshpass -e ssh root@172.17.1.25 mkdir -p /app/promptfill
       - sshpass -e scp -r infra/ root@172.17.1.25:/app/promptfill/
-      - sshpass -e ssh root@172.17.1.25 "export GH_PAT='${GH_PAT}'; export GH_OWNER='${GH_OWNER}'; bash -s" << 'ENDSSH'
-          set -e
-          cd /app/promptfill
-          mv infra/docker-compose.prod.yml docker-compose.yml 2>/dev/null || true
-          echo "$GH_PAT" | docker login ghcr.io -u "$GH_OWNER" --password-stdin
-          docker compose pull
-          docker compose up -d --force-recreate
-          docker image prune -f
-          echo "Deployment complete!"
+      - printf 'GH_PAT=%s\nGH_OWNER=%s\n' "$GH_PAT" "$GH_OWNER" > /tmp/.env
+      - sshpass -e scp /tmp/.env root@172.17.1.25:/app/promptfill/.env
+      - |-
+        sshpass -e ssh root@172.17.1.25 bash << 'ENDSSH'
+        set -e
+        cd /app/promptfill
+        . ./.env
+        mv infra/docker-compose.prod.yml docker-compose.yml 2>/dev/null || true
+        echo "$GH_PAT" | docker login ghcr.io -u "$GH_OWNER" --password-stdin
+        docker compose pull
+        docker compose up -d --force-recreate
+        docker image prune -f
+        rm -f .env
+        echo "Deployment complete!"
         ENDSSH
